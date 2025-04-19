@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Ethereum Transaction with Alchemy</title>
+    <script src="https://cdn.jsdelivr.net/npm/web3/dist/web3.min.js"></script>
+    <style>
+      /* Global styles */
+      body {
+        background-color: black;
+        color: white;
+        font-family: Arial, sans-serif;
+        text-align: center;
+      }
+
+      h1 {
+        margin-top: 50px;
+        color: #4caf50;
+      }
+
+      #transactionForm {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-top: 20px;
+        gap: 15px;
+      }
+
+      /* Input fields and labels */
+      label {
+        font-size: 16px;
+        margin-bottom: 5px;
+      }
+
+      input,
+      select {
+        padding: 10px;
+        width: 300px;
+        margin-bottom: 15px;
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        background-color: #1d1d1d;
+        color: white;
+      }
+
+      /* Buttons */
+      button {
+        padding: 8px 15px;
+        font-size: 14px;
+        border-radius: 15px;
+        border: none;
+        background-color: #4caf50;
+        color: white;
+        cursor: pointer;
+        transition: background-color 0.3s ease;
+      }
+
+      button:hover {
+        background-color: #45a049;
+      }
+
+      button:focus {
+        outline: none;
+      }
+
+      /* Align buttons next to the fields */
+      #validatePrivateKey,
+      #validateFrom,
+      #validateTo {
+        display: inline-block;
+        margin-left: 10px;
+        width: auto;
+      }
+
+      #transactionForm button[type="submit"],
+      #transactionForm button[type="button"] {
+        width: 200px;
+        margin: 10px 5px;
+      }
+
+      /* Logs and status */
+      #logs {
+        margin-top: 20px;
+        border: 1px solid #ccc;
+        padding: 10px;
+        max-height: 150px;
+        overflow-y: auto;
+        background-color: #2c2c2c;
+      }
+
+      #status {
+        margin-top: 20px;
+        font-size: 18px;
+      }
+
+      /* Loading progress bar */
+      #loading {
+        display: none;
+        margin-top: 20px;
+      }
+
+      #progressBar {
+        width: 100%;
+        background-color: #f3f3f3;
+      }
+
+      #progress {
+        height: 20px;
+        width: 0;
+        background-color: #4caf50;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>WALLET</h1>
+    <form id="transactionForm">
+      <label for="network">Network:</label>
+      <select id="network">
+        <option
+          value="https://eth-sepolia.g.alchemy.com/v2/R6qDkIda_kHly6YjSjbYgze36_ZmPKpd"
+        >
+          Sepolia
+        </option>
+      </select>
+
+      <label for="privateKey">Private Key:</label>
+      <div>
+        <input type="text" id="privateKey" required />
+        <button type="button" id="validatePrivateKey">Validate</button>
+      </div>
+
+      <label for="fromAddress">From Address:</label>
+      <div>
+        <input type="text" id="fromAddress" readonly />
+        <button type="button" id="validateFrom">Validate</button>
+      </div>
+
+      <label for="toAddress">To Address:</label>
+      <div>
+        <input type="text" id="toAddress" required />
+        <button type="button" id="validateTo">Validate</button>
+      </div>
+
+      <label for="amount">Price (ETH):</label>
+      <input type="number" id="amount" step="0.01" readonly />
+
+      <div>
+        <button type="submit">Send Transaction</button>
+        <button type="button" id="fetchBalances">Fetch Balances</button>
+      </div>
+    </form>
+
+    <div id="status"></div>
+    <div id="logs"></div>
+
+    <div id="loading">
+      <p>Transaction in progress...</p>
+      <div id="progressBar">
+        <div id="progress"></div>
+      </div>
+      <p id="estimatedTime"></p>
+      <p id="estimatedGasFee"></p>
+      <p id="actualGasFee"></p>
+    </div>
+
+    <script>
+      let web3;
+
+      // Function to initialize Web3
+      function initWeb3() {
+        const networkUrl = document.getElementById("network").value;
+        web3 = new Web3(new Web3.providers.HttpProvider(networkUrl));
+      }
+
+      // Function to get query parameters from URL
+      function getQueryParameter(name) {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get(name);
+      }
+
+      // Function to update fields dynamically from URL
+      function updateFieldsFromURL() {
+        const price = getQueryParameter("price");
+        const account = getQueryParameter("account");
+
+        if (price) {
+          document.getElementById("amount").value = price;
+        } else {
+          console.error("Price parameter is missing in the URL.");
+        }
+
+        if (account) {
+          document.getElementById("fromAddress").value = account;
+        } else {
+          console.error("Account parameter is missing in the URL.");
+        }
+      }
+
+      // Call the function on page load
+      window.addEventListener("DOMContentLoaded", () => {
+        updateFieldsFromURL();
+      });
+
+      // Rest of the validation and transaction logic remains unchanged
+      document
+        .getElementById("validatePrivateKey")
+        .addEventListener("click", () => {
+          initWeb3();
+          const privateKey = document.getElementById("privateKey").value.trim();
+          if (!/^0x[a-fA-F0-9]{64}$/.test(privateKey)) {
+            log(
+              "Invalid private key format. Must be a 64-character hexadecimal string starting with '0x'.",
+              "error"
+            );
+            return;
+          }
+          try {
+            web3.eth.accounts.privateKeyToAccount(privateKey);
+            log("Private key is valid.", "success");
+          } catch (error) {
+            log(`Invalid private key: ${error.message}`, "error");
+          }
+        });
+
+      document.getElementById("validateFrom").addEventListener("click", () => {
+        initWeb3();
+        const fromAddress = document.getElementById("fromAddress").value;
+        if (web3.utils.isAddress(fromAddress)) {
+          log(`From address ${fromAddress} is valid.`, "success");
+        } else {
+          log(`From address ${fromAddress} is invalid.`, "error");
+        }
+      });
+
+      document.getElementById("validateTo").addEventListener("click", () => {
+        initWeb3();
+        const toAddress = document.getElementById("toAddress").value;
+        if (web3.utils.isAddress(toAddress)) {
+          log(`To address ${toAddress} is valid.`, "success");
+        } else {
+          log(`To address ${toAddress} is invalid.`, "error");
+        }
+      });
+
+      async function fetchBalance(address) {
+        try {
+          const balance = await web3.eth.getBalance(address);
+          const etherBalance = web3.utils.fromWei(balance, "ether");
+          log(`Balance of ${address}: ${etherBalance} ETH`, "success");
+        } catch (error) {
+          log(
+            `Error fetching balance for ${address}: ${error.message}`,
+            "error"
+          );
+        }
+      }
+
+      async function sendTransaction(event) {
+        event.preventDefault();
+        initWeb3();
+
+        const privateKey = document.getElementById("privateKey").value;
+        const fromAddress = document.getElementById("fromAddress").value;
+        const toAddress = document.getElementById("toAddress").value;
+        const amount = document.getElementById("amount").value;
+
+        if (
+          !web3.utils.isAddress(fromAddress) ||
+          !web3.utils.isAddress(toAddress)
+        ) {
+          log("Invalid address(es)!", "error");
+          return;
+        }
+
+        try {
+          const gasPrice = await web3.eth.getGasPrice();
+          const gasEstimate = await web3.eth.estimateGas({
+            to: toAddress,
+            from: fromAddress,
+            value: web3.utils.toWei(amount, "ether"),
+          });
+
+          const transactionParameters = {
+            to: toAddress,
+            from: fromAddress,
+            value: web3.utils.toWei(amount, "ether"),
+            gas: gasEstimate,
+            gasPrice,
+          };
+
+          const signedTx = await web3.eth.accounts.signTransaction(
+            transactionParameters,
+            privateKey
+          );
+
+          const txHash = await web3.eth.sendSignedTransaction(
+            signedTx.rawTransaction
+          );
+          log(
+            `Transaction successful! Tx Hash: ${txHash.transactionHash}`,
+            "success"
+          );
+        } catch (error) {
+          log(`Transaction failed: ${error.message}`, "error");
+        }
+      }
+
+      document
+        .getElementById("transactionForm")
+        .addEventListener("submit", sendTransaction);
+
+      async function fetchBalances() {
+        const fromAddress = document.getElementById("fromAddress").value;
+        const toAddress = document.getElementById("toAddress").value;
+
+        if (web3.utils.isAddress(fromAddress)) {
+          fetchBalance(fromAddress);
+        }
+
+        if (web3.utils.isAddress(toAddress)) {
+          fetchBalance(toAddress);
+        }
+      }
+
+      document
+        .getElementById("fetchBalances")
+        .addEventListener("click", fetchBalances);
+
+      function log(message, type) {
+        const logElement = document.getElementById("logs");
+        const messageElement = document.createElement("p");
+        messageElement.textContent = message;
+        messageElement.classList.add(type);
+        logElement.appendChild(messageElement);
+      }
+    </script>
+  </body>
+</html>
