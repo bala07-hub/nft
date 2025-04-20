@@ -6,6 +6,7 @@ import MyProducts from "./MyProducts";
 import TokenStaking from "./TokenStaking";
 import Feed from "./Feed";
 import { generateProofAndStore } from '../utils/zkdrop';
+import ZKDropComponent from "./ZKDropComponent";
 
 const Home = (props) => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -22,6 +23,7 @@ const Home = (props) => {
   const [ProductPrices, setProductPrices] = useState({});
   const [loading, setLoading] = useState(false);
   const [proof, setProof] = useState("");
+  const [popZKDrop, setPopZKDrop] = useState(false);
 
   useEffect(() => {
     const getProductValues = async () => {
@@ -139,7 +141,15 @@ const Home = (props) => {
         account={props.account}
       />
 
-      {pop === false && pop2 === false && pop3 === false && pop4 === false && pop5 === false ? (
+      {popZKDrop && (
+        <ZKDropComponent
+          setTrigger={setPopZKDrop}
+          tokenContract={"0xfa9a1485d6c41c1c8266b0cfbF629Fcf657499a2"}
+          airdropContract={"0xE0997837a7fc049D858D4Fe9A992e9caa5234D6b"}
+        />
+      )}
+
+      {pop === false && pop2 === false && pop3 === false && pop4 === false && pop5 === false && popZKDrop === false ? (
         <div className="outer">
           <center>
             <a>CONNECTED TO: {props.account}</a>
@@ -217,16 +227,8 @@ const Home = (props) => {
                             BUY
                           </button>
                           <button
-                            onClick={async () => {
-                              const key = prompt("Enter your key");
-                              const secret = prompt("Enter your secret");
-                              try {
-                                await generateProofAndStore(key, secret, setLoading, setProof);
-                                //await collectZKDrop(proof, key, "0xE0997837a7fc049D858D4Fe9A992e9caa5234D6b", setLoading);
-                              } catch (e) {
-                                alert("Something went wrong during ZKDrop.");
-                                console.error(e);
-                              }
+                            onClick={() => {
+                              setPopZKDrop(true);
                             }}
                             className="btn btn-dark"
                           >
