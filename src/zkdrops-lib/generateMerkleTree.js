@@ -1,7 +1,6 @@
 const fs = require('fs');
 const path = require('path');
-const circomlibjs = require('circomlibjs');
-// adjust if not in lib/
+const { poseidon2 } = require('./lib/Poseidon'); // adjust if not in lib/
 const { MerkleTree } = require('./lib/MerkleTree');
 
 async function main() {

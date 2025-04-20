@@ -1,7 +1,8 @@
-import { ethers, providers } from "ethers";
+import { ethers } from "ethers";
 import { buildPoseidon } from "circomlibjs";
 import { MerkleTree, poseidon1, toHex } from "../zkdrops-lib";
-
+import AIRDROP_ABI from "../abis/PrivateAirdrop.json";
+import { hexZeroPad, hexlify } from "ethers/lib/utils"; 
 const DOMAIN = "";
 
 export async function generateProofAndStore(key, secret, setLoading, setProof) {
@@ -14,7 +15,7 @@ export async function generateProofAndStore(key, secret, setLoading, setProof) {
   console.log("✅ Converting key & secret to BigInt");
 
   try {
-    const provider = new providers.Web3Provider(window.ethereum);
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
     await provider.send("eth_requestAccounts", []);
     const signer = provider.getSigner();
     const address = await signer.getAddress();
@@ -25,7 +26,7 @@ export async function generateProofAndStore(key, secret, setLoading, setProof) {
     const keyBig = BigInt(key);
     const secretBig = BigInt(secret);
 
-    // Poseidon (same as zkmain)
+    // ✅ Poseidon hash
     const poseidonLib = await buildPoseidon();
     const poseidon = (args) => poseidonLib.F.toObject(poseidonLib(args));
     const rawCommitment = poseidon([keyBig, secretBig]);
@@ -39,16 +40,10 @@ export async function generateProofAndStore(key, secret, setLoading, setProof) {
     const zkey = await fetchBuffer(`${DOMAIN}/circuit_final.zkey`);
 
     const tree = MerkleTree.createFromStorageString(mtText.trim());
-
     console.log("🧪 Leaf count in parsed tree:", tree.leaves.length);
-    console.log("🔍 Searching for:", commitment.toString());
 
     const leafIndex = tree.leaves.findIndex((leaf) => BigInt(leaf.val) === commitment);
     console.log("🔍 Leaf index found:", leafIndex);
-    console.log("🪵 Parsed Merkle root:", tree.root.val.toString());
-    console.log("🌱 First 5 leaves:", tree.leaves.slice(0, 5).map((leaf, i) => `#${i}: ${leaf.val.toString()}`));
-    console.log("🌳 Merkle Root:", toHex(tree.root.val));
-
     if (leafIndex === -1) {
       alert("❌ Leaf not found in Merkle tree.");
       setLoading(false);
@@ -57,8 +52,9 @@ export async function generateProofAndStore(key, secret, setLoading, setProof) {
 
     console.log("🌿 Leaf matched in tree:", tree.leaves[leafIndex]);
     console.log("📌 Leaf index:", leafIndex);
+    console.log("🌳 Merkle Root:", toHex(tree.root.val));
+    console.log("🌱 First 5 leaves:", tree.leaves.slice(0, 5).map((leaf, i) => `#${i}: ${leaf.val.toString()}`));
 
-  
     const { vals: pathElements, indices: pathIndices } = tree.getMerkleProof(commitment);
 
     const input = {
@@ -71,7 +67,6 @@ export async function generateProofAndStore(key, secret, setLoading, setProof) {
       pathIndices,
     };
 
-    // ⛓️ SNARKJS from public script
     if (!window.snarkjs || !window.snarkjs.plonk) {
       alert("❌ snarkjs not loaded. Please include snarkjs.min.js in your public/index.html");
       return;
@@ -79,15 +74,57 @@ export async function generateProofAndStore(key, secret, setLoading, setProof) {
 
     const { plonk } = window.snarkjs;
     const { proof: zkProof, publicSignals } = await plonk.fullProve(input, wasm, zkey);
-    const calldata = await plonk.exportSolidityCallData(zkProof, publicSignals);
+    const calldataStr = await plonk.exportSolidityCallData(zkProof, publicSignals);
 
-    setProof(calldata);
+    // Only extract the first part (proof) from the calldata string
+    const [proofOnly] = calldataStr.split(",");
+    const sanitizedProof = proofOnly.replace(/[\[\]"\s]/g, "");
+    
+    // ✅ Convert and pad nullifierHash to bytes32
+    const paddedNullifierHash = hexZeroPad(hexlify(BigInt(input.nullifierHash)), 32);
+    console.log("📦 Final nullifierHash (bytes32):", paddedNullifierHash);
+    
+    setProof({
+      proof: sanitizedProof,
+      nullifierHash: paddedNullifierHash
+    });
+    
+    
+
   } catch (err) {
     console.error("❌ Proof generation failed:", err);
     alert("Proof generation failed. Check console.");
   }
+  
+
 
   setLoading(false);
+}
+
+export async function collectDropDirect(proofData, setLoading) {
+  try {
+    setLoading(true);
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const signer = provider.getSigner();
+    const airdropContract = new ethers.Contract(
+      "0x0165878A594ca255338adfa4d48449f69242Eb8F", // Replace with your actual deployed PrivateAirdrop contract address
+      AIRDROP_ABI.abi,
+      signer
+    );
+
+    const tx = await airdropContract.collectAirdrop(
+      proofData.proof,
+      proofData.nullifierHash
+    );
+
+    await tx.wait();
+    alert("✅ Drop collected successfully!");
+  } catch (error) {
+    console.error("❌ Drop collection failed:", error);
+    alert("❌ Drop collection failed. See console for details.");
+  } finally {
+    setLoading(false);
+  }
 }
 
 async function fetchText(url) {
@@ -98,23 +135,4 @@ async function fetchText(url) {
 async function fetchBuffer(url) {
   const res = await fetch(url);
   return Buffer.from(await res.arrayBuffer());
-}
-
-export async function collectZKDrop(proof, key, airdropContractAddress, setLoading) {
-  try {
-    setLoading(true);
-    const response = await fetch("/api/zkdrop", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ proof, key, airdropContractAddress }),
-    });
-
-    const result = await response.json();
-    setLoading(false);
-    return result;
-  } catch (error) {
-    setLoading(false);
-    console.error("ZKDrop collection failed:", error);
-    throw error;
-  }
 }

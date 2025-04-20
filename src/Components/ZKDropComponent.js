@@ -1,11 +1,10 @@
 import React, { useState } from "react";
-import { generateProofAndStore } from "../utils/zkdrop";
-// import { collectZKDrop } from "../utils/zkdrop"; // Uncomment if available
+import { generateProofAndStore, collectDropDirect } from "../utils/zkdrop";
 
 const ZKDropComponent = ({ setTrigger }) => {
   const [key, setKey] = useState("");
   const [secret, setSecret] = useState("");
-  const [proof, setProof] = useState("");
+  const [proof, setProof] = useState(null);
   const [loading, setLoading] = useState(false);
 
   const handleCalculateProof = async () => {
@@ -13,7 +12,20 @@ const ZKDropComponent = ({ setTrigger }) => {
       setLoading(true);
       await generateProofAndStore(key, secret, setLoading, setProof);
     } catch (err) {
-      alert("Failed to generate proof. Please try again.");
+      alert("❌ Failed to generate proof. Please try again.");
+      console.error(err);
+    }
+  };
+
+  const handleCollectDrop = async () => {
+    try {
+      if (!proof) {
+        alert("Please generate proof first.");
+        return;
+      }
+      await collectDropDirect(proof, setLoading);
+    } catch (err) {
+      alert("❌ Drop collection failed.");
       console.error(err);
     }
   };
@@ -64,23 +76,9 @@ const ZKDropComponent = ({ setTrigger }) => {
               {loading ? "Calculating..." : "Calculate Proof"}
             </button>
 
-            {/* Uncomment and configure when needed */}
-            {/* <button onClick={() => collectZKDrop(proof, key, contractAddress, setLoading)} className="btn btn-dark">Collect Drop</button> */}
-
-            <button
-  onClick={async () => {
-    try {
-      setLoading(true);
-      const res = await collectZKDrop(proof, key, "0xE0997837a7fc049D858D4Fe9A992e9caa5234D6b", setLoading); // Replace with your actual deployed address
-      alert("✅ Drop collected successfully!");
-    } catch (err) {
-      alert("❌ Drop collection failed");
-    }
-  }}
-  className="btn btn-dark"
->
-  Collect Drop
-</button>
+            <button onClick={handleCollectDrop} className="btn btn-dark">
+              {loading ? "Processing..." : "Collect Drop"}
+            </button>
 
             <button onClick={() => setTrigger(false)} className="btn btn-danger">
               Close
@@ -90,19 +88,17 @@ const ZKDropComponent = ({ setTrigger }) => {
           {proof && (
             <div style={{ marginTop: "1rem" }}>
               <h4>Generated Proof:</h4>
-              <textarea
-                value={proof}
-                readOnly
-                style={{
-                  width: "100%",
-                  minHeight: "150px",
-                  backgroundColor: "#f0f0f0",
-                  color: "#333",
-                  padding: "1rem",
-                  borderRadius: "8px",
-                  border: "1px solid #ccc"
-                }}
-              />
+              <div style={{
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+                backgroundColor: "#f0f0f0",
+                color: "#333",
+                padding: "1rem",
+                borderRadius: "8px",
+                border: "1px solid #ccc"
+              }}>
+                {JSON.stringify(proof, null, 2)}
+              </div>
             </div>
           )}
         </div>
