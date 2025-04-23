@@ -2,12 +2,14 @@ import { ethers } from "ethers";
 import { buildPoseidon } from "circomlibjs";
 import { MerkleTree, poseidon1, toHex } from "../zkdrops-lib";
 import AIRDROP_ABI from "../abis/PrivateAirdrop.json";
-import { hexZeroPad, hexlify } from "ethers/lib/utils"; 
+import { hexZeroPad, hexlify } from "ethers/lib/utils";
+import { toast } from "react-toastify";
+
 const DOMAIN = "";
 
 export async function generateProofAndStore(key, secret, setLoading, setProof) {
   if (!key || !secret) {
-    alert("Either key or secret is missing!");
+    toast.warn("Either key or secret is missing!");
     return;
   }
 
@@ -26,7 +28,6 @@ export async function generateProofAndStore(key, secret, setLoading, setProof) {
     const keyBig = BigInt(key);
     const secretBig = BigInt(secret);
 
-    // ✅ Poseidon hash
     const poseidonLib = await buildPoseidon();
     const poseidon = (args) => poseidonLib.F.toObject(poseidonLib(args));
     const rawCommitment = poseidon([keyBig, secretBig]);
@@ -45,7 +46,7 @@ export async function generateProofAndStore(key, secret, setLoading, setProof) {
     const leafIndex = tree.leaves.findIndex((leaf) => BigInt(leaf.val) === commitment);
     console.log("🔍 Leaf index found:", leafIndex);
     if (leafIndex === -1) {
-      alert("❌ Leaf not found in Merkle tree.");
+      toast.error("❌ Leaf not found in Merkle tree.");
       setLoading(false);
       return;
     }
@@ -68,7 +69,7 @@ export async function generateProofAndStore(key, secret, setLoading, setProof) {
     };
 
     if (!window.snarkjs || !window.snarkjs.plonk) {
-      alert("❌ snarkjs not loaded. Please include snarkjs.min.js in your public/index.html");
+      toast.error("❌ snarkjs not loaded. Please include snarkjs.min.js in your public/index.html");
       return;
     }
 
@@ -76,27 +77,19 @@ export async function generateProofAndStore(key, secret, setLoading, setProof) {
     const { proof: zkProof, publicSignals } = await plonk.fullProve(input, wasm, zkey);
     const calldataStr = await plonk.exportSolidityCallData(zkProof, publicSignals);
 
-    // Only extract the first part (proof) from the calldata string
     const [proofOnly] = calldataStr.split(",");
     const sanitizedProof = proofOnly.replace(/[\[\]"\s]/g, "");
-    
-    // ✅ Convert and pad nullifierHash to bytes32
     const paddedNullifierHash = hexZeroPad(hexlify(BigInt(input.nullifierHash)), 32);
     console.log("📦 Final nullifierHash (bytes32):", paddedNullifierHash);
-    
+
     setProof({
       proof: sanitizedProof,
       nullifierHash: paddedNullifierHash
     });
-    
-    
-
   } catch (err) {
     console.error("❌ Proof generation failed:", err);
-    alert("Proof generation failed. Check console.");
+    toast.error("Proof generation failed. Check console.");
   }
-  
-
 
   setLoading(false);
 }
@@ -107,7 +100,7 @@ export async function collectDropDirect(proofData, setLoading) {
     const provider = new ethers.providers.Web3Provider(window.ethereum);
     const signer = provider.getSigner();
     const airdropContract = new ethers.Contract(
-      "0x0165878A594ca255338adfa4d48449f69242Eb8F", // Replace with your actual deployed PrivateAirdrop contract address
+      "0x0165878A594ca255338adfa4d48449f69242Eb8F",
       AIRDROP_ABI.abi,
       signer
     );
@@ -118,10 +111,10 @@ export async function collectDropDirect(proofData, setLoading) {
     );
 
     await tx.wait();
-    alert("✅ Drop collected successfully!");
+    toast.success("✅ Drop collected successfully!");
   } catch (error) {
     console.error("❌ Drop collection failed:", error);
-    alert("❌ Drop collection failed. See console for details.");
+    toast.error("❌ Drop collection failed. See console for details.");
   } finally {
     setLoading(false);
   }

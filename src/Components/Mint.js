@@ -4,6 +4,10 @@ import { ethers } from 'ethers';
 import Web3 from 'web3';
 import axios from 'axios';
 import './Styles.css'
+import { toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
+
+
 const Mint = (props) => {
     const [filelink,setFileLink] = useState();
     const [file,setFile] = useState(false);
@@ -68,13 +72,25 @@ const Mint = (props) => {
         setMintStatus("Please Wait...");
         await transaction.wait();
         setMintStatus("");
-        alert("Uploaded Successfully");
+        toast.success("✅ NFT Minted Successfully!", {
+          position: "top-right",
+          autoClose: 3000,
+          pauseOnHover: true,
+          theme: "colored",
+        });
+        
         window.location.reload();
     
       } catch (e) {
         setMintStatus("");
         console.log(e);
-        alert("Failed to upload, try again");
+        toast.error("❌ Minting failed. Please try again.", {
+          position: "top-right",
+          autoClose: 3000,
+          pauseOnHover: true,
+          theme: "colored",
+        });
+        
       }
     }
     

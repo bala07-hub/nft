@@ -5,6 +5,9 @@ import Web3 from 'web3';
 import { ethers } from 'ethers';
 import "./App.css";
 import SignUp from './Components/SignUp';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import { toast } from 'react-toastify';
 
 const App = () => {
   const [sing, setsign] = useState(true);
@@ -63,13 +66,13 @@ const App = () => {
       if (isValid) {
         setIsLoggedIn(true);
         localStorage.setItem('isLoggedIn', 'true');
-        alert("Login Successful!");
+        toast.success("Login Successful!");
       } else {
-        alert("Login Failed! Check password or wallet.");
+        toast.error("Login Failed! Check password or wallet.");
       }
     } catch (error) {
       console.error("❌ Login error:", error);
-      alert(error?.reason || error?.message || "Login failed");
+      toast.error(error?.reason || error?.message || "Login failed");
     }
   };
 
@@ -77,36 +80,54 @@ const App = () => {
     return <Home contract={contract} account={account} setIsLoggedIn={setIsLoggedIn} />;
   } else {
     return (
-      sing ? (
-        <div className="lgbody">
-          <center>
-            <div className="lgbox">
-              <h2>LOGIN</h2>
-              <form className="form-group" onSubmit={handler}>
-                <label>Address</label><br />
-                <input
-                  type="text"
-                  className="form-control"
-                  value={account}
-                  readOnly
-                /><br />
-                <label>Password</label><br />
-                <input
-                  type="password"
-                  className="form-control"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                /><br />
-                <input type="submit" className="btn btn-secondary" value="Login" />
-              </form>
-              <p>Don't have an Account? <button onClick={() => setsign(false)} className="btn btn-secondary">Click here</button></p>
+      <>
+        <ToastContainer 
+          position="top-right" 
+          autoClose={3000} 
+          hideProgressBar={false} 
+          newestOnTop 
+          closeOnClick 
+          pauseOnFocusLoss 
+          draggable 
+          pauseOnHover 
+          theme="colored"
+        />
+    
+        {isLoggedIn ? (
+          <Home contract={contract} account={account} setIsLoggedIn={setIsLoggedIn} />
+        ) : (
+          sing ? (
+            <div className="lgbody">
+              <center>
+                <div className="lgbox">
+                  <h2>LOGIN</h2>
+                  <form className="form-group" onSubmit={handler}>
+                    <label>Address</label><br />
+                    <input
+                      type="text"
+                      className="form-control"
+                      value={account}
+                      readOnly
+                    /><br />
+                    <label>Password</label><br />
+                    <input
+                      type="password"
+                      className="form-control"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                    /><br />
+                    <input type="submit" className="btn btn-secondary" value="Login" />
+                  </form>
+                  <p>Don't have an Account? <button onClick={() => setsign(false)} className="btn btn-secondary">Click here</button></p>
+                </div>
+              </center>
             </div>
-          </center>
-        </div>
-      ) : (
-        <SignUp contract={contract} account={account} />
-      )
-    );
+          ) : (
+            <SignUp contract={contract} account={account} />
+          )
+        )}
+      </>
+    );    
   }
 };
 

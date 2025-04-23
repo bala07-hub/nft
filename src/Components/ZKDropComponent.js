@@ -1,5 +1,7 @@
 import React, { useState } from "react";
 import { generateProofAndStore, collectDropDirect } from "../utils/zkdrop";
+import { ToastContainer, toast } from "react-toastify";
+import 'react-toastify/dist/ReactToastify.css';
 
 const ZKDropComponent = ({ setTrigger }) => {
   const [key, setKey] = useState("");
@@ -11,8 +13,9 @@ const ZKDropComponent = ({ setTrigger }) => {
     try {
       setLoading(true);
       await generateProofAndStore(key, secret, setLoading, setProof);
+      toast.success("✅ Proof generated successfully!");
     } catch (err) {
-      alert("❌ Failed to generate proof. Please try again.");
+      toast.error("❌ Failed to generate proof. Please try again.");
       console.error(err);
     }
   };
@@ -20,18 +23,21 @@ const ZKDropComponent = ({ setTrigger }) => {
   const handleCollectDrop = async () => {
     try {
       if (!proof) {
-        alert("Please generate proof first.");
+        toast.warn("⚠️ Please generate proof first.");
         return;
       }
       await collectDropDirect(proof, setLoading);
+      toast.success("✅ Drop collected successfully!");
     } catch (err) {
-      alert("❌ Drop collection failed.");
+      toast.error("❌ Drop collection failed.");
       console.error(err);
     }
   };
 
   return (
     <div style={{ backgroundColor: "#add8e6", color: "#000", minHeight: "100vh", padding: "2rem" }}>
+      <ToastContainer position="top-right" autoClose={3000} hideProgressBar={false} newestOnTop closeOnClick pauseOnFocusLoss draggable pauseOnHover theme="colored" />
+
       <h2 style={{ textAlign: "center", marginBottom: "2rem" }}>ZKDrop Airdrop</h2>
 
       <div style={{
