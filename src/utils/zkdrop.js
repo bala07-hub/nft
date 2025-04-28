@@ -2,10 +2,12 @@ import { ethers } from "ethers";
 import { buildPoseidon } from "circomlibjs";
 import { MerkleTree, poseidon1, toHex } from "../zkdrops-lib";
 import AIRDROP_ABI from "../abis/PrivateAirdrop.json";
+import ERC20_ABI from "../abis/ERC20Token.json";
+import deployedAddresses from "../deployed-addresses.json"; // ✅ NEW import
 import { hexZeroPad, hexlify } from "ethers/lib/utils";
 import { toast } from "react-toastify";
 
-const DOMAIN = "";
+const DOMAIN = ""; // Update if needed
 
 export async function generateProofAndStore(key, secret, setLoading, setProof) {
   if (!key || !secret) {
@@ -84,54 +86,79 @@ export async function generateProofAndStore(key, secret, setLoading, setProof) {
 
     setProof({
       proof: sanitizedProof,
-      nullifierHash: paddedNullifierHash
+      nullifierHash: paddedNullifierHash,
+      commitment: toHex(commitment),
+      leafIndex: leafIndex,
+      merkleRoot: toHex(tree.root.val),
+      address: address
     });
-    return true;  // ✅ success
   } catch (err) {
     console.error("❌ Proof generation failed:", err);
-    if (err.message.includes("Assert Failed")) {
-      toast.error("❌ Proof generation failed due to invalid Key/Secret pair. Please try a different Key/Secret.");
-    } else {
-      toast.error("Proof generation failed. Check console.");
-    }
-    return false;  // ❗ failure
-  } finally {
-    setLoading(false);
+    toast.error("Proof generation failed. Check console.");
   }
+
+  setLoading(false);
 }
-  
+
 export async function collectDropDirect(proofData, setLoading) {
   try {
     setLoading(true);
-
-    if (!proofData || !proofData.proof || !proofData.nullifierHash) {
-      toast.error("Proof data is invalid or missing.");
-      return false;
-    }
-
     const provider = new ethers.providers.Web3Provider(window.ethereum);
     const signer = provider.getSigner();
+    const address = await signer.getAddress();
+
     const airdropContract = new ethers.Contract(
-      "0x0165878A594ca255338adfa4d48449f69242Eb8F",
+      deployedAddresses.PrivateAirdrop,
       AIRDROP_ABI.abi,
       signer
     );
 
+    const tokenContract = new ethers.Contract(
+      deployedAddresses.ERC20,
+      ERC20_ABI,
+      signer
+    );
+
+    console.log("🚀 Sending collectAirdrop transaction...");
     const tx = await airdropContract.collectAirdrop(
       proofData.proof,
       proofData.nullifierHash
     );
 
-    await tx.wait();
-    return true;  // ✅ success
+    console.log("✅ collectAirdrop tx sent:", tx.hash);
+    const receipt = await tx.wait();
+    console.log("✅ collectAirdrop tx confirmed:", receipt.transactionHash);
+    console.log("📦 collectAirdrop status:", receipt.status);
+
+    let balanceFormatted = null;
+    try {
+      console.log("🎯 Fetching token balance...");
+      const balance = await tokenContract.balanceOf(address);
+      balanceFormatted = ethers.utils.formatUnits(balance, 18);
+      console.log("✅ Balance fetched:", balanceFormatted);
+    } catch (balanceError) {
+      console.warn("⚠️ Unable to fetch balance. User can check wallet manually.", balanceError);
+    }
+
+    return {
+      success: receipt.status === 1,
+      txHash: receipt.transactionHash,
+      balance: balanceFormatted, // could be null if fetch failed
+    };
   } catch (error) {
     console.error("❌ Drop collection failed:", error);
     toast.error("❌ Drop collection failed. See console for details.");
-    return false;
+    return {
+      success: false,
+      txHash: null,
+      balance: null
+    };
   } finally {
     setLoading(false);
   }
 }
+
+
 
 
 async function fetchText(url) {

@@ -24,6 +24,12 @@ module.exports = {
           process: "process/browser.js",
         })
       );
+      webpackConfig.ignoreWarnings = [
+        {
+          message: /Failed to parse source map/,
+        },
+      ];
+
 
       return webpackConfig;
     },
