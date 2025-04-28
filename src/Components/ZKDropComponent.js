@@ -3,36 +3,55 @@ import { generateProofAndStore, collectDropDirect } from "../utils/zkdrop";
 import { ToastContainer, toast } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
 
+
+
 const ZKDropComponent = ({ setTrigger }) => {
   const [key, setKey] = useState("");
   const [secret, setSecret] = useState("");
   const [proof, setProof] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const [isCalculating, setIsCalculating] = useState(false);
+  const [isProcessingDrop, setIsProcessingDrop] = useState(false);
 
+  
+  
+  
   const handleCalculateProof = async () => {
-    try {
-      setLoading(true);
-      await generateProofAndStore(key, secret, setLoading, setProof);
-      toast.success("✅ Proof generated successfully!");
-    } catch (err) {
-      toast.error("❌ Failed to generate proof. Please try again.");
-      console.error(err);
+    if (!key || !secret) {
+      toast.error("Key and Secret are required to generate proof");
+      return;
     }
+  
+    setIsCalculating(true);
+    try {
+      const success = await generateProofAndStore(key, secret, setIsCalculating, setProof);
+      if (success) {
+        toast.success("Proof generated successfully!");
+      }
+    } catch (err) {
+      console.error("Error during proof generation:", err);
+      toast.error("Proof generation failed. See console for details.");
+    }
+    setIsCalculating(false);
   };
-
+  
+  
   const handleCollectDrop = async () => {
     try {
-      if (!proof) {
-        toast.warn("⚠️ Please generate proof first.");
-        return;
+      setIsProcessingDrop(true);
+  
+      const success = await collectDropDirect(proof, setIsProcessingDrop);
+      if (success) {
+        toast.success("✅ Drop Collected Successfully!");
       }
-      await collectDropDirect(proof, setLoading);
-      toast.success("✅ Drop collected successfully!");
-    } catch (err) {
-      toast.error("❌ Drop collection failed.");
-      console.error(err);
+    } catch (error) {
+      console.error("Error during drop collection:", error);
+      toast.error("Drop collection failed. See console for details.");
+    } finally {
+      setIsProcessingDrop(false);
     }
   };
+  
+  
 
   return (
     <div style={{ backgroundColor: "#add8e6", color: "#000", minHeight: "100vh", padding: "2rem" }}>
@@ -78,13 +97,13 @@ const ZKDropComponent = ({ setTrigger }) => {
           />
 
           <div style={{ display: "flex", gap: "1rem" }}>
-            <button onClick={handleCalculateProof} className="btn btn-dark">
-              {loading ? "Calculating..." : "Calculate Proof"}
-            </button>
+          <button onClick={handleCalculateProof} className="btn btn-dark">
+             {isCalculating ? "Calculating..." : "Calculate Proof"}
+         </button>
 
-            <button onClick={handleCollectDrop} className="btn btn-dark">
-              {loading ? "Processing..." : "Collect Drop"}
-            </button>
+         <button onClick={handleCollectDrop} className="btn btn-dark">
+  {isProcessingDrop ? "Processing..." : "Collect Drop"}
+</button>
 
             <button onClick={() => setTrigger(false)} className="btn btn-danger">
               Close

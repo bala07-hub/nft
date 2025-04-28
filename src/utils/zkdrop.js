@@ -86,17 +86,29 @@ export async function generateProofAndStore(key, secret, setLoading, setProof) {
       proof: sanitizedProof,
       nullifierHash: paddedNullifierHash
     });
+    return true;  // ✅ success
   } catch (err) {
     console.error("❌ Proof generation failed:", err);
-    toast.error("Proof generation failed. Check console.");
+    if (err.message.includes("Assert Failed")) {
+      toast.error("❌ Proof generation failed due to invalid Key/Secret pair. Please try a different Key/Secret.");
+    } else {
+      toast.error("Proof generation failed. Check console.");
+    }
+    return false;  // ❗ failure
+  } finally {
+    setLoading(false);
   }
-
-  setLoading(false);
 }
-
+  
 export async function collectDropDirect(proofData, setLoading) {
   try {
     setLoading(true);
+
+    if (!proofData || !proofData.proof || !proofData.nullifierHash) {
+      toast.error("Proof data is invalid or missing.");
+      return false;
+    }
+
     const provider = new ethers.providers.Web3Provider(window.ethereum);
     const signer = provider.getSigner();
     const airdropContract = new ethers.Contract(
@@ -111,14 +123,16 @@ export async function collectDropDirect(proofData, setLoading) {
     );
 
     await tx.wait();
-    toast.success("✅ Drop collected successfully!");
+    return true;  // ✅ success
   } catch (error) {
     console.error("❌ Drop collection failed:", error);
     toast.error("❌ Drop collection failed. See console for details.");
+    return false;
   } finally {
     setLoading(false);
   }
 }
+
 
 async function fetchText(url) {
   const res = await fetch(url);
