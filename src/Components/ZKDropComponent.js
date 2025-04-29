@@ -1,40 +1,37 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { generateProofAndStore, collectDropDirect } from "../utils/zkdrop";
 import { ToastContainer, toast } from "react-toastify";
 import 'react-toastify/dist/ReactToastify.css';
 
-
-
 const ZKDropComponent = ({ setTrigger }) => {
   const [key, setKey] = useState("");
   const [secret, setSecret] = useState("");
-  const [proof, setProof] = useState(null); 
+  const [proof, setProof] = useState(null);
   const [isCalculating, setIsCalculating] = useState(false);
   const [isProcessingDrop, setIsProcessingDrop] = useState(false);
 
-  
-  
-  
+  useEffect(() => {
+    setProof(null); // Clear old proof when key or secret changes
+  }, [key, secret]);
+
   const handleCalculateProof = async () => {
     if (!key || !secret) {
       toast.error("Key and Secret are required to generate proof");
       return;
     }
-  
+
     setIsCalculating(true);
     try {
       const success = await generateProofAndStore(key, secret, setIsCalculating, setProof);
-      if (success) {
-        toast.success("Proof generated successfully!");
-      }
+      if (success) toast.success("Proof generated successfully!");
     } catch (err) {
       console.error("Error during proof generation:", err);
       toast.error("Proof generation failed. See console for details.");
+    } finally {
+      setIsCalculating(false);
     }
-    setIsCalculating(false);
   };
-  
-  
+
   const handleCollectDrop = async () => {
     try {
       setIsProcessingDrop(true);
@@ -43,7 +40,10 @@ const ZKDropComponent = ({ setTrigger }) => {
         toast.success(
           <div>
             🎉 Drop collected! <br />
-            <strong>Tx:</strong> <a href={`https://sepolia.etherscan.io/tx/${result.txHash}`} target="_blank" rel="noopener noreferrer">{result.txHash.slice(0, 10)}...</a> <br />
+            <strong>Tx:</strong>{" "}
+            <a href={`https://sepolia.etherscan.io/tx/${result.txHash}`} target="_blank" rel="noopener noreferrer">
+              {result.txHash.slice(0, 10)}...
+            </a><br />
             <strong>New Balance:</strong> {result.balance} ZKT
           </div>,
           { autoClose: 10000 }
@@ -56,7 +56,8 @@ const ZKDropComponent = ({ setTrigger }) => {
       setIsProcessingDrop(false);
     }
   };
-  
+
+  const showProgress = isCalculating || isProcessingDrop;
 
   return (
     <div style={{ backgroundColor: "#add8e6", color: "#000", minHeight: "100vh", padding: "2rem" }}>
@@ -102,46 +103,57 @@ const ZKDropComponent = ({ setTrigger }) => {
           />
 
           <div style={{ display: "flex", gap: "1rem" }}>
-          <button onClick={handleCalculateProof} className="btn btn-dark">
-             {isCalculating ? "Calculating..." : "Calculate Proof"}
-         </button>
+            <button onClick={handleCalculateProof} className="btn btn-dark" disabled={isCalculating}>
+              {isCalculating ? "Generating..." : "Calculate Proof"}
+            </button>
 
-         <button onClick={handleCollectDrop} className="btn btn-dark">
-  {isProcessingDrop ? "Processing..." : "Collect Drop"}
-</button>
+            <button onClick={handleCollectDrop} className="btn btn-dark" disabled={!proof || isProcessingDrop}>
+              {isProcessingDrop ? "Processing..." : "Collect Drop"}
+            </button>
 
             <button onClick={() => setTrigger(false)} className="btn btn-danger">
               Close
             </button>
           </div>
 
+          {/* Progress Bar */}
+          {showProgress && (
+            <div style={{ marginTop: "10px" }}>
+              <div className="progress">
+                <div
+                  className="progress-bar progress-bar-striped progress-bar-animated"
+                  role="progressbar"
+                  style={{ width: "100%" }}
+                >
+                  {isCalculating ? "Generating Proof..." : "Processing Drop..."}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Proof details display */}
           {proof && (
-  <div style={{ marginTop: "2rem" }}>
-    <h4>Proof Details:</h4>
-
-    <div style={{
-      whiteSpace: "pre-wrap",
-      wordBreak: "break-word",
-      backgroundColor: "#f0f0f0",
-      color: "#333",
-      padding: "1rem",
-      borderRadius: "8px",
-      border: "1px solid #ccc",
-      display: "flex",
-      flexDirection: "column",
-      gap: "0.5rem"
-    }}>
-      <div><strong>Commitment:</strong> {proof.commitment}</div>
-      <div><strong>Leaf Index:</strong> {proof.leafIndex}</div>
-      <div><strong>Merkle Root:</strong> {proof.merkleRoot}</div>
-      <div><strong>Wallet Address:</strong> {proof.address}</div>
-
-      {/* Optional if you want to show nullifierHash */}
-      {/* <div><strong>Nullifier Hash:</strong> {proof.nullifierHash}</div> */}
-    </div>
-  </div>
-)}
-
+            <div style={{ marginTop: "2rem" }}>
+              <h4>Proof Details:</h4>
+              <div style={{
+                whiteSpace: "pre-wrap",
+                wordBreak: "break-word",
+                backgroundColor: "#f0f0f0",
+                color: "#333",
+                padding: "1rem",
+                borderRadius: "8px",
+                border: "1px solid #ccc",
+                display: "flex",
+                flexDirection: "column",
+                gap: "0.5rem"
+              }}>
+                <div><strong>Commitment:</strong> {proof.commitment}</div>
+                <div><strong>Leaf Index:</strong> {proof.leafIndex}</div>
+                <div><strong>Merkle Root:</strong> {proof.merkleRoot}</div>
+                <div><strong>Wallet Address:</strong> {proof.address}</div>
+              </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
