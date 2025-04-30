@@ -7,6 +7,7 @@ import TokenStaking from "./TokenStaking";
 import Feed from "./Feed";
 import { generateProofAndStore } from '../utils/zkdrop';
 import ZKDropComponent from "./ZKDropComponent";
+import GifEditor from "../Components/GifEditor";
 
 const Home = (props) => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -24,6 +25,7 @@ const Home = (props) => {
   const [loading, setLoading] = useState(false);
   const [proof, setProof] = useState("");
   const [popZKDrop, setPopZKDrop] = useState(false);
+  const [showGifEditor, setShowGifEditor] = useState(false);
 
   useEffect(() => {
     const getProductValues = async () => {
@@ -32,7 +34,7 @@ const Home = (props) => {
 
         for (let i = 0; i < data.length; i++) {
           const ProductID = data[i][0].toString();
-          const imageUrl = data[i][1];
+          const imageUrl = data[i][1].replace("https://ipfs.io", "https://gateway.pinata.cloud");
           const seller = data[i][3];
           const price = data[i][4].toString();
           const status = data[i][5];
@@ -74,72 +76,20 @@ const Home = (props) => {
   return (
     <div>
       <div className="header">
-        <a href="#deftault" className="logo">
-          NFT MarketPlace
-        </a>
+        <a href="#deftault" className="logo">NFT MarketPlace</a>
         <div className="header-right">
-          <a
-            onClick={() => {
-              localStorage.removeItem("isLoggedIn");
-              props.setIsLoggedIn(false);
-            }}
-          >
-            SIGN OUT
-          </a>
-          <a
-            onClick={() => {
-              setPop3(true);
-              setPop(false);
-              setPop2(false);
-              setPop4(false);
-              setPop5(false);
-            }}
-          >
-            PROFILE
-          </a>
-          <a
-            onClick={() => {
-              setPop4(true);
-              setPop3(false);
-              setPop(false);
-              setPop2(false);
-              setPop5(false);
-            }}
-          >
-            STAKING
-          </a>
-          <a
-            onClick={() => {
-              setPop4(false);
-              setPop3(false);
-              setPop(false);
-              setPop2(false);
-              setPop5(true);
-            }}
-          >
-            FEED
-          </a>
+          <a onClick={() => { localStorage.removeItem("isLoggedIn"); props.setIsLoggedIn(false); }}>SIGN OUT</a>
+          <a onClick={() => { setPop3(true); setPop(false); setPop2(false); setPop4(false); setPop5(false); }}>PROFILE</a>
+          <a onClick={() => { setPop4(true); setPop3(false); setPop(false); setPop2(false); setPop5(false); }}>STAKING</a>
+          <a onClick={() => { setPop4(false); setPop3(false); setPop(false); setPop2(false); setPop5(true); }}>FEED</a>
         </div>
       </div>
+
       <Feed trigger={pop5} setTrigger={setPop5} contract={props.contract} account={props.account} />
       <TokenStaking trigger={pop4} setTrigger={setPop4} contract={props.contract} account={props.account} />
       <Mint trigger={pop2} setTrigger={setPop2} contract={props.contract} account={props.account} />
       <MyProducts trigger={pop3} setTrigger={setPop3} contract={props.contract} account={props.account} />
-      <Cart
-        trigger={pop}
-        setTrigger={setPop}
-        cartItems={items}
-        Products={product}
-        items={items}
-        setProducts={setProduct}
-        setItem={setItems}
-        TotalPayment={total}
-        setTotalPayment={setTotal}
-        TotalPayment1={ERTNtotal}
-        setTotalPayment1={setERTNtotal}
-        contract={props.contract}
-        account={props.account}
-      />
+      <Cart trigger={pop} setTrigger={setPop} cartItems={items} Products={product} items={items} setProducts={setProduct} setItem={setItems} TotalPayment={total} setTotalPayment={setTotal} TotalPayment1={ERTNtotal} setTotalPayment1={setERTNtotal} contract={props.contract} account={props.account} />
 
       {popZKDrop && (
         <ZKDropComponent
@@ -151,102 +101,64 @@ const Home = (props) => {
 
       {pop === false && pop2 === false && pop3 === false && pop4 === false && pop5 === false && popZKDrop === false ? (
         <div className="outer">
-          <center>
-            <a>CONNECTED TO: {props.account}</a>
-          </center>
+          <center><a>CONNECTED TO: {props.account}</a></center>
           <br />
           <div className="NFTHeader">
-            <center>
-              <a href="#deftault" className="logo">
-                LIVE NFTS
-              </a>
-            </center>
-            <input
-              type="text"
-              placeholder="Search NFT Name"
-              value={searchQuery}
-              onChange={handleSearchChange}
-            />
+            <center><a href="#deftault" className="logo">LIVE NFTS</a></center>
+            <input type="text" placeholder="Search NFT Name" value={searchQuery} onChange={handleSearchChange} />
             <div className="NFTHeaderElemts">
-              <a
-                onClick={() => {
-                  setPop2(true);
-                  setPop(false);
-                  setPop3(false);
-                  setPop4(false);
-                  setPop5(false);
-                }}
-              >
-                LIST
-              </a>
-              <a
-                onClick={() => {
-                  setPop(true);
-                  setPop2(false);
-                  setPop3(false);
-                  setPop4(false);
-                  setPop5(false);
-                }}
-              >
-                CART
-              </a>
+              <a onClick={() => { setPop2(true); setPop(false); setPop3(false); setPop4(false); setPop5(false); }}>LIST</a>
+              <a onClick={() => { setPop(true); setPop2(false); setPop3(false); setPop4(false); setPop5(false); }}>CART</a>
             </div>
           </div>
-          {Object.keys(product).length === 0 ? (
-            <center>
-              <h5>Currently No Live NFTS</h5>
-            </center>
-          ) : (
-            ""
-          )}
-          <div className="inner">
-            {Object.entries(searchQuery ? filteredProducts : product).map(
-              ([ProductID, [nftname, imageUrl, price, status, seller, priceERTN]], index) =>
-                status === false ? (
-                  ""
-                ) : (
-                  <div className="Productitem" key={index}>
-                    <div className="productbody">
-                      <center>
-                        <img src={imageUrl} width="260px" height="200px" alt="Product" />
-                        <p>{nftname}</p>
-                        <span><b>{seller}</b></span>
-                        <p>
-                          <b>
-                            Price: {price} Wei or {priceERTN} ERTNS
-                          </b>
-                        </p>
-                        <div className="d-flex justify-content-center gap-2 mt-2">
-                          <button
-                            onClick={() => {
-                              handleBuyClick(nftname, price, imageUrl, ProductID, priceERTN);
-                              alert("Added to Cart");
-                            }}
-                            className="btn btn-dark"
-                          >
-                            BUY
-                          </button>
-                          <button
-                            onClick={() => {
-                              setPopZKDrop(true);
-                            }}
-                            className="btn btn-dark"
-                          >
-                            ZKDrop
-                          </button>
-                        </div>
-                          
 
-                      </center>
+          {Object.keys(product).length === 0 ? (<center><h5>Currently No Live NFTS</h5></center>) : ""}
+
+          <div className="inner">
+            {Object.entries(searchQuery ? filteredProducts : product).map(([ProductID, [nftname, imageUrl, price, status, seller, priceERTN]], index) => status === false ? "" : (
+              <div className="Productitem" key={index}>
+                <div className="productbody">
+                  <center>
+                    {imageUrl.endsWith(".gif") ? (
+                      <img
+                        src={imageUrl}
+                        width="260px"
+                        height="200px"
+                        alt="GIF Product"
+                        loading="lazy"
+                      />
+                    ) : imageUrl.endsWith(".mp4") ? (
+                      <video src={imageUrl} width="260px" height="200px" controls autoPlay loop muted />
+                    ) : (
+                      <img
+                        src={imageUrl}
+                        width="260px"
+                        height="200px"
+                        alt="Product"
+                        loading="lazy"
+                      />
+                    )}
+
+                    {imageUrl.endsWith(".gif") && (
+                      <div style={{ position: 'absolute', top: '8px', right: '8px', backgroundColor: '#000', color: '#fff', padding: '2px 6px', borderRadius: '4px', fontSize: '12px' }}>
+                        GIF
+                      </div>
+                    )}
+
+                    <p>{nftname}</p>
+                    <span><b>{seller}</b></span>
+                    <p><b>Price: {price} Wei or {priceERTN} ERTNS</b></p>
+                    <div className="d-flex justify-content-center gap-2 mt-2">
+                      <button onClick={() => { handleBuyClick(nftname, price, imageUrl, ProductID, priceERTN); alert("Added to Cart"); }} className="btn btn-dark">BUY</button>
+                      <button onClick={() => { setPopZKDrop(true); }} className="btn btn-dark">ZKDrop</button>
                     </div>
-                  </div>
-                )
-            )}
+                  </center>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
-      ) : (
-        ""
-      )}
+      ) : ""}
     </div>
   );
 };
