@@ -1,82 +1,176 @@
-📦 NFTMarketplace_StakingMerged
-A full-stack decentralized NFT Marketplace with advanced features such as token staking, zkDrop-based airdrop eligibility, royalty-based resale tracking, and a DeFi-integrated reward model.
+# 🚀 NFT Marketplace with ZKDrop, AI Art & GIF Minting
 
-🚀 Features
-🖼️ NFT Minting
+A fully-featured decentralized NFT Marketplace powered by **Zero-Knowledge Proofs (zk-SNARKs)**, **AI-generated Art**, **Random Unsplash images**, **GIF creation via GIPHY**, and a staking mechanism. Built using **Solidity**, **React**, **Hardhat**, **Pinata IPFS**, and **zkdrops-lib**.
 
-Mint NFTs with metadata (URI, name, price) gated by zkDrop airdrop eligibility.
+> 🔒 Powered by ZKDrop (Merkle Tree + zk-SNARK) model  
+> 🧠 Integrated with AI Art via Cloudflare Workers  
+> 🎞️ Supports GIFs (search or upload)  
+> 🌄 Random Unsplash image minting  
+> 🎮 ERC20-based staking rewards
 
-Royalty distribution on every resale to the original minter.
+## 🧩 Tech Stack
 
-💰 Token Staking
+- **Frontend:** React.js, Tailwind CSS, Axios, React Toastify
+- **Backend:** Node.js (optional), zkdrops-lib
+- **Smart Contracts:** Solidity (via Hardhat)
+- **Blockchain Network:** Hardhat Localhost or Sepolia Testnet
+- **Storage:** Pinata (IPFS)
+- **ZKP:** zkdrops-lib, snarkjs, circom
+- **AI Art:** Cloudflare Workers API
+- **GIFs:** Giphy API
 
-Stake custom ERC20 tokens to earn real-time staking rewards.
+## 🔧 Installation
 
-Tiered access (e.g., premium minters post NFTs freely if staked enough).
+### 1. Clone the Repository
 
-🪂 zkDrop Gated Airdrops
-
-Minting restricted to users who’ve proven zkDrop eligibility via zero-knowledge proof (ZKP).
-
-Uses Merkle Tree + zk-SNARKs to verify without exposing wallet data.
-
-🧠 Smart Contract Integration
-
-NFTandDefiMerged.sol: Central logic for minting, resale, and staking checks.
-
-Staking.sol: Handles ERC20 staking, reward tracking, and claiming.
-
-PrivateAirdrop.sol: Verifies zkDrop airdrop claims.
-
-ERC20Token.sol: Custom ERC20 token used for staking and ERTN-based purchases.
-
-🛠️ Tech Stack
-Solidity (Hardhat framework)
-
-React (Frontend) – Coming soon
-
-Ethers.js for smart contract interactions
-
-zk-SNARK Proof verification with snarkjs and zkdrops-lib
-
-OpenZeppelin libraries for ERC721, ERC20, and access control
-
-📂 Contracts
-
-Contract Name	Description
-NFTandDefiMerged	Core NFT contract integrating minting, resale, staking checks, and tweet feed
-Staking	Staking logic for ERC20 tokens and real-time reward calculation
-PrivateAirdrop	zkDrop integration for private, verifiable airdrops
-ERC20Token	Token used for staking and purchases
-Verifier	Verifies zk-SNARK proofs (via Groth16 or Plonk)
-🔧 Scripts Included
-deploy.js – Deploys the NFTandDefiMerged contract
-
-deployStaking.js – Deploys the staking contract
-
-deployToken.js – Deploys the ERC20 token
-
-deployZKDrop.js – Deploys zkDrop airdrop and verifier
-
-testIntegration.js – Tests the complete flow: token transfer → stake → zkDrop (optional) → mint NFT
-
-🧪 Next Steps (Work in Progress)
-✅ Add collectZKDrop() frontend integration
-
-✅ Visual feedback using react-toastify
-
-🖼️ UI for minting, buying, and staking NFTs
-
-📊 Show reward tracking and balance updates in real-time
-
-📁 Merge staking and zkDrop views into a unified marketplace dashboard
-
-🧑‍💻 Getting Started
-bash
-Copy
-Edit
-git clone https://github.com/yourusername/NFTMarketplace_StakingMerged.git
+```bash
+git clone https://github.com/your-username/NFTMarketplace_StakingMerged.git
 cd NFTMarketplace_StakingMerged
+```
+
+### 2. Install Dependencies
+
+```bash
 npm install
-npx hardhat node      # Start local blockchain
+```
+
+## ⚙️ Environment Setup
+
+Create a `.env.local` file in the root and add:
+
+```env
+REACT_APP_API_URL=your_sepolia_rpc_url
+REACT_APP_PRIVATE_KEY=your_wallet_private_key
+REACT_APP_PINATA_API_KEY=your_pinata_key
+REACT_APP_PINATA_SECRET=your_pinata_secret
+REACT_APP_UNSPLASH_ACCESS_KEY=your_unsplash_access_key
+REACT_APP_GIPHY_API_KEY=your_giphy_api_key
+REACT_APP_CLOUDFLARE_AI_URL=http://localhost:3004/generate-image
+REACT_APP_SEPOLIA_RPC_URL=your_sepolia_rpc_url
+```
+
+> ⚠️ Never commit your `.env.local` file. Use `.gitignore`.
+
+## 📦 Contract Deployment
+
+Run Hardhat local node:
+
+```bash
+npx hardhat node
+```
+
+Then deploy the contracts:
+
+```bash
 npx hardhat run scripts/deploy.js --network localhost
+npx hardhat run scripts/deploy1.js --network localhost
+npx hardhat run scripts/deploy2.js --network localhost
+npx hardhat run scripts/deployToken.js --network localhost
+npx hardhat run scripts/deployStaking.js --network localhost
+npx hardhat run scripts/deployZKDrop.js --network localhost
+```
+
+> Alternatively, use `--network sepolia` if deploying to testnet.
+
+## 🧪 Run Tests
+
+```bash
+npx hardhat test
+```
+
+## 💻 Running the App
+
+Start the frontend:
+
+```bash
+npm start
+```
+
+Start backend (if you use Cloudflare Workers locally):
+
+```bash
+node server.js
+```
+
+## 🧠 Features
+
+### ✅ NFT Minting Options
+
+- Upload your own file
+- 🎨 **Random Art** from Unsplash
+- 🤖 **AI-Generated Art** via Cloudflare
+- 🎞️ **GIFs** via GIPHY
+- ✨ **GIF Editor** for animated creation
+
+### 🧬 Zero-Knowledge Proofs with ZKDrop
+
+ZKDrop enables secure, private airdrops using:
+
+- **Merkle Trees**
+- **Poseidon Hashing**
+- **zk-SNARKs**
+- On-chain verification of Merkle inclusion via smart contracts
+
+Once a user proves ownership, they can **claim airdrop tokens** and **unlock gated minting features**.
+
+### 💰 Token Staking
+
+Stake ERTN tokens and earn rewards. View staking status directly in the Staking tab.
+
+## 📂 Project Structure
+
+```
+├── contracts/
+│   ├── Marketplace.sol
+│   ├── ERC20Token.sol
+│   ├── Staking.sol
+│   ├── PrivateAirdrop.sol (ZKDrop)
+│
+├── scripts/
+│   ├── deploy.js
+│   ├── deploy1.js
+│   ├── deploy2.js
+│   ├── deployToken.js
+│   ├── deployStaking.js
+│   └── deployZKDrop.js
+│
+├── src/
+│   ├── Components/
+│   │   ├── Home.js
+│   │   ├── Mint.js
+│   │   ├── ZKDropComponent.js
+│   │   └── GifEditor.js
+│   ├── utils/
+│   │   └── zkdrop.js
+│
+├── server.js (for AI API proxy)
+└── .env.local
+```
+
+## 🧠 ZKDrop Model Explained
+
+ZKDrop uses a **Merkle Tree of commitments** generated by Poseidon hashing of `key + secret`.  
+The frontend generates a proof using `snarkjs` and submits it to the smart contract.
+
+```txt
+User → Generates Proof → Sends to Contract → Contract Verifies via Verifier.sol → Tokens Released
+```
+
+Benefits:
+
+- Full on-chain verification
+- Privacy-preserving airdrops
+- Access-controlled features like gated minting
+
+## 🛠️ Coming Soon
+
+- 🌐 Live deployment on Sepolia
+- 🧪 zk-rollup integration
+- 📊 NFT analytics dashboard
+
+## 🤝 Contributing
+
+
+## 📜 License
+
+
