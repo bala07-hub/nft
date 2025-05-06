@@ -16,10 +16,7 @@ export async function generateProofAndStore(key, secret, setLoading, setProof) {
 
   setLoading(true);
   console.log("✅ Starting ZKDrop Proof Generation...");
-
-  // 🧮 Field modulus for BN254
-  const FIELD_SIZE = BigInt("21888242871839275222246405745257275088548364400416034343698204186575808495617");
-
+  
   try {
     const provider = new ethers.providers.Web3Provider(window.ethereum);
     await provider.send("eth_requestAccounts", []);
@@ -34,8 +31,10 @@ export async function generateProofAndStore(key, secret, setLoading, setProof) {
     console.log("🔢 keyBig:", keyBig);
     console.log("🔢 secretBig:", secretBig);
 
+    const FIELD_SIZE = BigInt("21888242871839275222246405745257275088548364400416034343698204186575808495617");
+
     const rawCommitment = await poseidon2(keyBig, secretBig);
-    const commitment = rawCommitment % FIELD_SIZE;
+    const commitment = (rawCommitment % FIELD_SIZE + FIELD_SIZE) % FIELD_SIZE;
 
     console.log("🧾 Computed Poseidon Commitment (hex):", toHex(commitment));
     console.log("🔢 Commitment (decimal):", commitment.toString());
@@ -68,7 +67,6 @@ export async function generateProofAndStore(key, secret, setLoading, setProof) {
     const rawNullifierHash = await poseidon1(keyBig);
     const nullifierHash = (rawNullifierHash % FIELD_SIZE + FIELD_SIZE) % FIELD_SIZE;
 
-
     const recipientBigInt = BigInt(address);
     const rootBigInt = tree.root.val;
 
@@ -89,7 +87,6 @@ export async function generateProofAndStore(key, secret, setLoading, setProof) {
 
     if (!window.snarkjs || !window.snarkjs.plonk) {
       toast.error("❌ snarkjs not loaded. Please include snarkjs.min.js in your public/index.html");
-      setLoading(false);
       return;
     }
 
@@ -123,6 +120,7 @@ export async function generateProofAndStore(key, secret, setLoading, setProof) {
 
   setLoading(false);
 }
+
 
 
 export async function collectDropDirect(proofData, setLoading) {
