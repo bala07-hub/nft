@@ -1,7 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TreeNode = exports.MerkleTree = void 0;
-const Library_1 = require("./Library");
+//const Library_1 = require("./Library");
 const Mimc_1 = require("./Mimc");
 /** Merkle tree of MimcSponge hashes */
 class MerkleTree {
@@ -78,17 +78,16 @@ class MerkleTree {
         let result = "";
         let currRow = [this.root];
         while (currRow.length > 0) {
-            for (let i = 0; i < currRow.length; i++) {
-                result += (0, Library_1.toHex)(currRow[i].val);
-                if (i != currRow.length - 1)
-                    result += ",";
-            }
-            currRow = MerkleTree.getChildRow(currRow);
-            if (currRow.length != 0)
-                result += "\n";
+          for (let i = 0; i < currRow.length; i++) {
+            result += "0x" + BigInt(currRow[i].val).toString(16);
+            if (i != currRow.length - 1) result += ",";
+          }
+          currRow = MerkleTree.getChildRow(currRow);
+          if (currRow.length != 0) result += "\n";
         }
         return result;
-    }
+      }
+      
     leafExists(search) {
         return this.leaves.find(node => node.val == search) !== undefined;
     }

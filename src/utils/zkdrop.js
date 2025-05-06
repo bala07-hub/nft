@@ -7,6 +7,7 @@ import { hexZeroPad, hexlify } from "ethers/lib/utils";
 import { toast } from "react-toastify";
 
 const DOMAIN = ""; // Update if needed
+
 export async function generateProofAndStore(key, secret, setLoading, setProof) {
   if (!key || !secret) {
     toast.warn("Either key or secret is missing!");
@@ -14,7 +15,10 @@ export async function generateProofAndStore(key, secret, setLoading, setProof) {
   }
 
   setLoading(true);
-  console.log("✅ Converting key & secret to BigInt");
+  console.log("✅ Starting ZKDrop Proof Generation...");
+
+  // 🧮 Field modulus for BN254
+  const FIELD_SIZE = BigInt("21888242871839275222246405745257275088548364400416034343698204186575808495617");
 
   try {
     const provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -22,65 +26,84 @@ export async function generateProofAndStore(key, secret, setLoading, setProof) {
     const signer = provider.getSigner();
     const address = await signer.getAddress();
 
-    console.log("🔐 key:", key);
-    console.log("🕵️‍♀️ secret:", secret);
+    console.log("🔐 Raw Key:", key);
+    console.log("🕵️‍♀️ Raw Secret:", secret);
 
     const keyBig = BigInt(key);
     const secretBig = BigInt(secret);
-    console.log("👀 keyBig:", keyBig, typeof keyBig);
-    console.log("👀 secretBig:", secretBig, typeof secretBig);
-    
+    console.log("🔢 keyBig:", keyBig);
+    console.log("🔢 secretBig:", secretBig);
+
     const rawCommitment = await poseidon2(keyBig, secretBig);
+    const commitment = rawCommitment % FIELD_SIZE;
 
-    const commitment = BigInt.asUintN(256, rawCommitment);
-
-    console.log("🧾 Final Poseidon Commitment (hex):", toHex(commitment));
-    console.log("🔢 Final Poseidon Commitment (decimal):", commitment.toString());
+    console.log("🧾 Computed Poseidon Commitment (hex):", toHex(commitment));
+    console.log("🔢 Commitment (decimal):", commitment.toString());
 
     const mtText = await fetchText(`${DOMAIN}/mt_8192.txt`);
     const wasm = await fetchBuffer(`${DOMAIN}/circuit.wasm`);
     const zkey = await fetchBuffer(`${DOMAIN}/circuit_final.zkey`);
 
     const tree = MerkleTree.createFromStorageString(mtText.trim());
-    console.log("🧪 Leaf count in parsed tree:", tree.leaves.length);
+    console.log("🌳 Total Leaves in Merkle Tree:", tree.leaves.length);
 
     const leafIndex = tree.leaves.findIndex((leaf) => BigInt(leaf.val) === commitment);
-    console.log("🔍 Leaf index found:", leafIndex);
+    console.log("🔍 Leaf Index:", leafIndex);
     if (leafIndex === -1) {
+      console.error("❌ Leaf not found in Merkle Tree!");
       toast.error("❌ Leaf not found in Merkle tree.");
       setLoading(false);
       return;
     }
 
-    console.log("🌿 Leaf matched in tree:", tree.leaves[leafIndex]);
-    console.log("📌 Leaf index:", leafIndex);
-    console.log("🌳 Merkle Root:", toHex(tree.root.val));
-    console.log("🌱 First 5 leaves:", tree.leaves.slice(0, 5).map((leaf, i) => `#${i}: ${leaf.val.toString()}`));
+    console.log("🌿 ✅ Leaf Found:", tree.leaves[leafIndex].val.toString());
+    console.log("🌲 Merkle Root:", toHex(tree.root.val));
+    console.log("📊 Sample Leaves:", tree.leaves.slice(0, 3).map((leaf, i) => `#${i}: ${leaf.val.toString()}`));
 
     const { vals: pathElements, indices: pathIndices } = tree.getMerkleProof(commitment);
 
+    console.log("🛤 Path Elements:", pathElements.map(e => e.toString()));
+    console.log("🔢 Path Indices:", pathIndices);
+
+    const rawNullifierHash = await poseidon1(keyBig);
+    const nullifierHash = (rawNullifierHash % FIELD_SIZE + FIELD_SIZE) % FIELD_SIZE;
+
+
+    const recipientBigInt = BigInt(address);
+    const rootBigInt = tree.root.val;
+
+    console.log("🧠 Sanitized nullifierHash (decimal):", nullifierHash.toString());
+    console.log("🧠 recipient address BigInt:", recipientBigInt.toString());
+
     const input = {
-      root: tree.root.val.toString(),
-      nullifierHash: (await poseidon1(keyBig)).toString(),
-      recipient: BigInt(address).toString(),
+      root: rootBigInt.toString(),
+      nullifierHash: nullifierHash.toString(),
+      recipient: recipientBigInt.toString(),
       nullifier: keyBig.toString(),
       secret: secretBig.toString(),
       pathElements: pathElements.map((e) => e.toString()),
-      pathIndices,
+      pathIndices
     };
+
+    console.log("🔣 Input to ZK Proof:", input);
 
     if (!window.snarkjs || !window.snarkjs.plonk) {
       toast.error("❌ snarkjs not loaded. Please include snarkjs.min.js in your public/index.html");
+      setLoading(false);
       return;
     }
 
     const { plonk } = window.snarkjs;
     const { proof: zkProof, publicSignals } = await plonk.fullProve(input, wasm, zkey);
-    const calldataStr = await plonk.exportSolidityCallData(zkProof, publicSignals);
 
+    console.log("🧾 Public Signals:", publicSignals);
+    console.log("🔐 ZK Proof:", zkProof);
+
+    const calldataStr = await plonk.exportSolidityCallData(zkProof, publicSignals);
     const [proofOnly] = calldataStr.split(",");
     const sanitizedProof = proofOnly.replace(/[\[\]"\s]/g, "");
-    const paddedNullifierHash = hexZeroPad(hexlify(BigInt(input.nullifierHash)), 32);
+    const paddedNullifierHash = hexZeroPad(hexlify(nullifierHash), 32);
+
     console.log("📦 Final nullifierHash (bytes32):", paddedNullifierHash);
 
     setProof({
@@ -91,13 +114,16 @@ export async function generateProofAndStore(key, secret, setLoading, setProof) {
       merkleRoot: toHex(tree.root.val),
       address: address
     });
+
+    console.log("✅ Proof successfully generated and stored.");
   } catch (err) {
     console.error("❌ Proof generation failed:", err);
-    toast.error("Proof generation failed. Check console.");
+    toast.error("Proof generation failed. See console for details.");
   }
 
   setLoading(false);
 }
+
 
 export async function collectDropDirect(proofData, setLoading) {
   try {
