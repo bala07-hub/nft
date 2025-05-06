@@ -1,14 +1,12 @@
 import { ethers } from "ethers";
-import { buildPoseidon } from "circomlibjs";
-import { MerkleTree, poseidon1, toHex } from "../zkdrops-lib";
+import { MerkleTree, poseidon1, poseidon2, toHex } from "../zkdrops-lib";
 import AIRDROP_ABI from "../abis/PrivateAirdrop.json";
 import ERC20_ABI from "../abis/ERC20Token.json";
-import deployedAddresses from "../deployed-addresses.json"; // ✅ NEW import
+import deployedAddresses from "../deployed-addresses.json"; 
 import { hexZeroPad, hexlify } from "ethers/lib/utils";
 import { toast } from "react-toastify";
 
 const DOMAIN = ""; // Update if needed
-
 export async function generateProofAndStore(key, secret, setLoading, setProof) {
   if (!key || !secret) {
     toast.warn("Either key or secret is missing!");
@@ -29,10 +27,11 @@ export async function generateProofAndStore(key, secret, setLoading, setProof) {
 
     const keyBig = BigInt(key);
     const secretBig = BigInt(secret);
+    console.log("👀 keyBig:", keyBig, typeof keyBig);
+    console.log("👀 secretBig:", secretBig, typeof secretBig);
+    
+    const rawCommitment = await poseidon2(keyBig, secretBig);
 
-    const poseidonLib = await buildPoseidon();
-    const poseidon = (args) => poseidonLib.F.toObject(poseidonLib(args));
-    const rawCommitment = poseidon([keyBig, secretBig]);
     const commitment = BigInt.asUintN(256, rawCommitment);
 
     console.log("🧾 Final Poseidon Commitment (hex):", toHex(commitment));
