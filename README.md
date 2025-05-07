@@ -1,6 +1,9 @@
 # 🚀 NFT Marketplace with ZKDrop, AI Art & GIF Minting
 
+[![Live Demo](https://img.shields.io/badge/Live_Demo-zkdrop--nft.netlify.app-brightgreen)](https://zkdrop-nft.netlify.app/)
+
 A fully-featured decentralized NFT Marketplace powered by **Zero-Knowledge Proofs (zk-SNARKs)**, **AI-generated Art**, **Random Unsplash images**, **GIF creation via GIPHY**, and a staking mechanism. Built using **Solidity**, **React**, **Hardhat**, **Pinata IPFS**, and **zkdrops-lib**.
+
 
 > 🔒 Powered by ZKDrop (Merkle Tree + zk-SNARK) model
 > 🧠 Integrated with AI Art via Cloudflare Workers
